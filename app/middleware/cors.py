@@ -7,6 +7,8 @@ def setup_cors(app: FastAPI) -> None:
     origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://road-damage-monitoring-frontend.vercel.app",
+        "https://road-damage-monitoring-frontend.vercel.app/" # Add this variant!
     ]
 
     # 2. Add the middleware to the FastAPI application instance
@@ -16,4 +18,4 @@ def setup_cors(app: FastAPI) -> None:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-    ) 
+    )
