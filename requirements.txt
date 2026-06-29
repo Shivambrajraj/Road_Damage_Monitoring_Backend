@@ -1,0 +1,28 @@
+# Web framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Validation / settings
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# File uploads
+python-multipart>=0.0.9
+
+# Auth
+bcrypt>=4.1.0
+pyjwt>=2.8.0
+
+# Image handling (used for upload validation/preprocessing,
+# independent of the AI model — needed even before Phase 2)
+opencv-python-headless>=4.9.0.80
+numpy>=1.26.0
+
+# Env file loading
+python-dotenv>=1.0.0
+
+# --- Phase 2 (uncomment once you swap in the real trained model) ---
+# ultralytics>=8.1.0

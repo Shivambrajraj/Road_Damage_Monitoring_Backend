@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Virtual Environments
+venv/
+ENV/
+.env
+
+# Runtime databases, state records, and logs
+*.db
+*.db-journal
+logs/
+app.log
+
+# Uploaded local application binary storage
+app/storage/uploads/original/*
+app/storage/uploads/processed/*
+app/storage/uploads/thumbnails/*
+app/storage/exports/*
+!app/storage/uploads/original/.gitkeep
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,17 @@
+# deployments/docker/docker-compose.yml
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile
+    container_name: road_damage_api_container
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../app:/backend/app
+      - ../../logs:/backend/logs
+    environment:
+      - DATABASE_URL=sqlite:///./road_damage.db
+    restart: always
