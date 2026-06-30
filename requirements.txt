@@ -4,6 +4,7 @@ uvicorn[standard]>=0.28.0
 
 # Database
 sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
 
 # Validation / settings
 pydantic>=2.6.0
@@ -26,3 +27,4 @@ python-dotenv>=1.0.0
 
 # --- Phase 2 (uncomment once you swap in the real trained model) ---
 # ultralytics>=8.1.0
+
