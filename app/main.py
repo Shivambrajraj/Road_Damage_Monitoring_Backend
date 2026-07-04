@@ -8,7 +8,6 @@ from sqlalchemy import text
 from app.core.database import engine, Base, SessionLocal
 
 from app.core.config import settings
-from app.core.database import engine, Base, SessionLocal  # Added SessionLocal for health check
 from app.core.logging import configure_logging, logger
 from app.api.router import api_router
 from app.middleware.cors import setup_cors
@@ -27,6 +26,16 @@ import app.models.audit_log
 
 configure_logging()
 logger.info("Initializing Road Damage Monitoring platform services...")
+
+# --- TEMPORARY RENDER FREE TIER DATABASE FIX ---
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE reports ADD COLUMN IF NOT EXISTS reported_by_id INTEGER REFERENCES users(id);"))
+        conn.commit()
+    logger.info("Successfully checked/added missing reported_by_id column to database.")
+except Exception as e:
+    logger.warning(f"Database column fix skipped or already applied: {e}")
+# -----------------------------------------------
 
 Base.metadata.create_all(bind=engine)
 
@@ -89,6 +98,7 @@ def health_check():
     finally:
         if db:
             db.close()
+            
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
