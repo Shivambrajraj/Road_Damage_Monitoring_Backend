@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.report import ReportResponse, ReportCreateResponse
-from app.services.report_service import report_service
+from app.services.report_service import ReportService as report_service
 
 router = APIRouter()
 
