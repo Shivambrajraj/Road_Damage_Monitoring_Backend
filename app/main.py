@@ -29,9 +29,8 @@ logger.info("Initializing Road Damage Monitoring platform services...")
 
 # --- TEMPORARY RENDER FREE TIER DATABASE FIX ---
 try:
-    with engine.connect() as conn:
+    with engine.begin() as conn:  # engine.begin() automatically handles the transaction commit
         conn.execute(text("ALTER TABLE reports ADD COLUMN IF NOT EXISTS reported_by_id INTEGER REFERENCES users(id);"))
-        conn.commit()
     logger.info("Successfully checked/added missing reported_by_id column to database.")
 except Exception as e:
     logger.warning(f"Database column fix skipped or already applied: {e}")
