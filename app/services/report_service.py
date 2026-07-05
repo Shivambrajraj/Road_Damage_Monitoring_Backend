@@ -1,41 +1,35 @@
-from sqlalchemy.orm import Session
-from app.models.report import Report
+# app/services/report_service.py
+from app.repositories.report_repository import report_repository
 
-class ReportRepository:
-    def __init__(self):
-        self.model = Report
-
-    def get_by_id(self, db: Session, report_id: int) -> Report | None:
-        return db.query(self.model).filter(self.model.id == report_id).first()
-
-    def create_report(
-        self, db: Session, *, image_path: str, damage_category: str,
-        latitude: float | None, longitude: float | None, reported_by_id: int | None = None
-    ) -> Report:
-        db_obj = Report(
-            image_path=image_path,
-            damage_category=damage_category,
+class ReportService:
+    @staticmethod
+    async def process_and_save_report(db, image, latitude, longitude, current_user):
+        # ... your existing image file processing/saving logic ...
+        
+        db_report = report_repository.create_report(
+            db=db,
+            image_path=file_location,
+            damage_category=summary_category,
             latitude=latitude,
             longitude=longitude,
-            reported_by_id=reported_by_id
+            reported_by_id=current_user.id,
         )
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        return db_report
 
-    def get_filtered(self, db: Session, *, damage_type=None, severity=None, owner_id: int | None = None):
-        query = db.query(self.model)
-        if damage_type:
-            query = query.filter(self.model.damage_category.ilike(f"%{damage_type}%"))
-        if severity:
-            query = query.filter(self.model.severity_level.ilike(severity))
-        
-        # owner_id=None means "no restriction" (admin view)
-        if owner_id is not None:
-            query = query.filter(self.model.reported_by_id == owner_id)
-            
-        return query.order_by(self.model.id.desc()).all()
+    @staticmethod
+    def get_reports(db, current_user, damage_type=None, severity=None):
+        owner_id = None if current_user.is_admin else current_user.id
+        reports = report_repository.get_filtered(db, damage_type=damage_type, severity=severity, owner_id=owner_id)
+        return [serialize_report(r) for r in reports]
 
-# THIS IS THE CRITICAL MISSING LINE THAT FIXES THE IMPORT ERROR:
-report_repository = ReportRepository()
+    @staticmethod
+    def get_report_by_id(db, report_id, current_user):
+        report = report_repository.get_by_id(db, report_id)
+        if report is None:
+            return None
+        if not current_user.is_admin and report.reported_by_id != current_user.id:
+            return "forbidden"
+        return serialize_report(report)
+
+# Instantiate the service object
+report_service = ReportService()
