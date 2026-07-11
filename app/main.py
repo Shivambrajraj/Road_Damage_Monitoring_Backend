@@ -23,6 +23,7 @@ import app.models.damage
 import app.models.user
 import app.models.notification
 import app.models.audit_log
+import app.models.otp
 
 configure_logging()
 logger.info("Initializing Road Damage Monitoring platform services...")
@@ -34,8 +35,24 @@ try:
     logger.info("Successfully checked/added missing reported_by_id column to database.")
 except Exception as e:
     logger.warning(f"Database column fix skipped or already applied: {e}")
-# -----------------------------------------------
 
+# --- Add is_verified to users (works for both Postgres and SQLite) ---
+def _ensure_column(conn, table: str, column: str, ddl_type: str):
+    is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+    if is_sqlite:
+        existing = [row[1] for row in conn.execute(text(f"PRAGMA table_info({table});"))]
+        if column not in existing:
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type};"))
+    else:
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {ddl_type};"))
+
+try:
+    with engine.begin() as conn:
+        _ensure_column(conn, "users", "is_verified", "BOOLEAN DEFAULT FALSE")
+    logger.info("Successfully checked/added missing is_verified column to users.")
+except Exception as e:
+    logger.warning(f"is_verified column fix skipped or already applied: {e}")
+# -----------------------------------------------
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)

@@ -11,3 +11,4 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=False)  # True once the email OTP challenge is passed

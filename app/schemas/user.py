@@ -12,6 +12,7 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_admin: bool
+    is_verified: bool = False
 
     class Config:
         from_attributes = True

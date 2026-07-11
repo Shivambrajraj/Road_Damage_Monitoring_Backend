@@ -9,6 +9,7 @@ from app.api.v1.users import router as users_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.maps import router as maps_router
+from app.api.v1.admin import router as admin_router
 
 api_router = APIRouter()
 
@@ -20,3 +21,4 @@ api_router.include_router(users_router, prefix="/users", tags=["Users"])
 api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(maps_router, prefix="/maps", tags=["Maps"])
+api_router.include_router(admin_router, prefix="/admin", tags=["Admin"])
