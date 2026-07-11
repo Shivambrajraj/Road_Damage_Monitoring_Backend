@@ -1,6 +1,7 @@
 # app/api/router.py
 from fastapi import APIRouter
 
+# Import all sub-routers explicitly
 from app.api.v1.reports import router as reports_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.analytics import router as analytics_router
@@ -12,7 +13,7 @@ from app.api.v1.admin import router as admin_router
 
 api_router = APIRouter()
 
-# Register each explicit router into the main v1 tree
+# Register each sub-router into the main API tree
 api_router.include_router(reports_router, prefix="/reports", tags=["Reports"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
