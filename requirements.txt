@@ -1,25 +1,10 @@
-PROJECT_NAME="Road Damage Analytics Engine"
-API_V1_STR="/api/v1"
-DATABASE_URL="sqlite:///./road_damage.db"
-
-JWT_SECRET_KEY=
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-BACKEND_BASE_URL="http://localhost:8000"
-FRONTEND_URL="http://localhost:5173"
-
-# --- Gmail SMTP (for OTP verification emails) ---
-# 1. Enable 2-Step Verification on the Gmail account: https://myaccount.google.com/security
-# 2. Create an App Password: https://myaccount.google.com/apppasswords
-# 3. Paste the 16-character app password below (NOT your normal Gmail password)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=
-SMTP_FROM_NAME="Road Damage AI"
-
-OTP_EXPIRE_MINUTES=10
-OTP_MAX_ATTEMPTS=5
-EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES=20
+fastapi>=0.110.0
+uvicorn>=0.28.0
+sqlalchemy>=2.0.28
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+email-validator>=2.1.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.9
+psycopg2-binary>=2.9.9
