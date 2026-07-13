@@ -17,15 +17,14 @@ class Settings(BaseSettings):
     # Used in emails (e.g. "Open <FRONTEND_URL>/login") and CORS
     FRONTEND_URL: str = "http://localhost:5173"
 
-    # --- Email / OTP settings (Gmail SMTP) ---
-    # Gmail requires an "App Password" (Google Account -> Security -> 2-Step
-    # Verification -> App Passwords), NOT your normal Gmail login password.
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""          # e.g. yourapp@gmail.com
-    SMTP_PASSWORD: str = ""      # 16-character Gmail App Password
-    SMTP_FROM_EMAIL: str = ""    # defaults to SMTP_USER if left blank
-    SMTP_FROM_NAME: str = "Road Damage AI"
+    # --- Email / OTP settings (Brevo transactional email HTTP API) ---
+    # Render's free tier blocks outbound SMTP ports (25/465/587), so emails
+    # are sent via Brevo's REST API over HTTPS (port 443) instead, which
+    # cannot be blocked without breaking the app's own web traffic.
+    # Get BREVO_API_KEY from: Brevo dashboard -> SMTP & API -> API Keys.
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""   # must be a verified sender in Brevo
+    BREVO_SENDER_NAME: str = "Road Damage AI"
 
     OTP_EXPIRE_MINUTES: int = 10
     OTP_MAX_ATTEMPTS: int = 5

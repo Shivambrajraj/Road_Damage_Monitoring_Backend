@@ -21,7 +21,7 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
 def send_otp(payload: SendOTPRequest, db: Session = Depends(get_db)):
     """
     Step 1 of registration: emails a 6-digit one-time code to the given
-    address via Gmail SMTP. The code expires after OTP_EXPIRE_MINUTES.
+    address via Brevo's transactional email API. The code expires after OTP_EXPIRE_MINUTES.
     """
     return otp_service.send_registration_otp(db, payload.email)
 
