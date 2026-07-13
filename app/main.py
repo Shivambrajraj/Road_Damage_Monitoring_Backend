@@ -78,6 +78,29 @@ async def app_exception_handler(request: Request, exc: AppException):
 # Updated target registration reference
 app.add_exception_handler(IntegrityError, database_integrity_exception_handler)
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Safety net for any exception that isn't an AppException/HTTPException
+    (e.g. a bug, a third-party library error, an SMTP timeout, etc.).
+
+    Without this, Starlette's default error handling happens OUTSIDE the
+    CORS middleware layer, so the response is sent back with no CORS
+    headers at all. The browser then blocks the response entirely and
+    the frontend sees what looks like a network/CORS failure instead of
+    the real 500 error. Registering a handler here keeps every response
+    inside the CORS-wrapped part of the middleware stack.
+    """
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "InternalServerError",
+            "detail": "Something went wrong on our end. Please try again shortly.",
+        },
+    )
+
 STORAGE_PATHS = [
     "app/storage/uploads/original",
     "app/storage/uploads/processed",

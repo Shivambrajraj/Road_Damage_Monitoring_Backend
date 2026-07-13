@@ -22,6 +22,7 @@ from email.mime.text import MIMEText
 
 from app.core.config import settings
 from app.core.logging import logger
+from app.exceptions.custom import AppException
 
 
 class EmailManager:
@@ -98,7 +99,7 @@ class EmailManager:
         context = ssl.create_default_context()
 
         try:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
                 server.starttls(context=context)
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
                 server.sendmail(
@@ -107,11 +108,21 @@ class EmailManager:
                     message.as_string(),
                 )
             logger.info(f"OTP email dispatched to {to_email}")
-        except Exception as e:
+        except smtplib.SMTPAuthenticationError as e:
+            # Wrong SMTP_USER / SMTP_PASSWORD (or using a normal Gmail
+            # password instead of a 16-char App Password).
+            logger.error(f"SMTP auth failed sending to {to_email}: {e}")
+            raise AppException(
+                status_code=502,
+                detail="Email service is misconfigured (SMTP authentication failed). Please contact support.",
+            ) from e
+        except (smtplib.SMTPException, TimeoutError, OSError) as e:
+            # Any other SMTP/network-level failure talking to Gmail.
             logger.error(f"Failed to send OTP email to {to_email}: {e}")
-            # Surface a generic failure to the caller; the API layer turns
-            # this into a clean 502 instead of leaking SMTP internals.
-            raise
+            raise AppException(
+                status_code=502,
+                detail="Could not send the verification email right now. Please try again in a moment.",
+            ) from e
 
 
 email_manager = EmailManager()
