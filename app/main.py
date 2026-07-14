@@ -18,6 +18,10 @@ from app.middleware.authorization import MaintenanceLockMiddleware
 # Updated Import Path to reflect consolidated exception domain:
 from app.exceptions.custom import AppException, database_integrity_exception_handler
 
+import subprocess
+import sys
+from pathlib import Path
+
 import app.models.report 
 import app.models.damage 
 import app.models.user
@@ -57,6 +61,16 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
+@app.on_event("startup")
+async def trigger_admin_creation():
+    try:
+        print("Executing Admin Promotion Script...")
+        script_path = Path(__file__).resolve().parent.parent / "scripts" / "create_admin.py"
+        subprocess.run([sys.executable, str(script_path)], check=True)
+        print("Admin Promotion Completed Successfully!")
+    except Exception as e:
+        print(f"Admin Promotion script failed on startup: {str(e)}")
+        
 app.add_middleware(RateLimitMiddleware, requests_per_minute=30)
 app.add_middleware(RequestLoggingMiddleware)
 setup_cors(app)

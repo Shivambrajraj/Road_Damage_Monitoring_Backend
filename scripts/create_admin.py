@@ -1,5 +1,4 @@
 # scripts/create_admin.py
-
 import sys
 import os
 
@@ -10,12 +9,14 @@ from app.core.database import SessionLocal
 from app.models.user import User
 from app.core.security import SecurityManager
 
-ADMIN_EMAIL = "shivambrajraj@gmail.com"
-# The frontend logs in by sending the email as the "username" field (see
-# LoginForm.jsx / AuthContext.jsx), so username == email keeps admin login
-# consistent with every regular account.
+# Pull credentials securely from Environment Variables instead of hardcoding
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "shivambrajraj@gmail.com")
 ADMIN_USERNAME = ADMIN_EMAIL
-ADMIN_PASSWORD = "@Shivam07"
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+# Strict enforcement to prevent blank password structural writes
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD environment variable is not set in the environment matrix!")
 
 
 def create_superuser():
@@ -50,7 +51,7 @@ def create_superuser():
             print("Successfully created Superuser Profile!")
 
         print(f"Email/Username: {ADMIN_EMAIL}")
-        print("Password: (the one set in this script)")
+        print("Password: (successfully pulled securely from environment vars)")
 
     except Exception as e:
         db.rollback()
