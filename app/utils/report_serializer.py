@@ -27,6 +27,7 @@ def serialize_report(report: Report) -> dict:
         "id": str(report.id),
         "type": report.damage_category,
         "severity": (report.severity_level or "low").lower(),
+        "status": report.status or "pending",
         "latitude": report.latitude,
         "longitude": report.longitude,
         "created_at": report.timestamp.isoformat() if report.timestamp else None,

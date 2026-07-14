@@ -14,7 +14,10 @@ class Report(Base):
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     severity_level = Column(String, default="Low", nullable=False)
 
-    # NEW: who filed this report (nullable so old rows don't break)
+    # NEW: lifecycle status
+    status = Column(String, default="pending", nullable=False)
+    status_updated_at = Column(DateTime, nullable=True)
+
     reported_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     damages = relationship("Damage", back_populates="report", cascade="all, delete-orphan")

@@ -40,7 +40,7 @@ try:
 except Exception as e:
     logger.warning(f"Database column fix skipped or already applied: {e}")
 
-# --- Add is_verified to users (works for both Postgres and SQLite) ---
+# --- Helper to ensure columns exist (works for both Postgres and SQLite) ---
 def _ensure_column(conn, table: str, column: str, ddl_type: str):
     is_sqlite = settings.DATABASE_URL.startswith("sqlite")
     if is_sqlite:
@@ -56,7 +56,17 @@ try:
     logger.info("Successfully checked/added missing is_verified column to users.")
 except Exception as e:
     logger.warning(f"is_verified column fix skipped or already applied: {e}")
+
+# --- New columns execution block for the reports status tracking schema ---
+try:
+    with engine.begin() as conn:
+        _ensure_column(conn, "reports", "status", "VARCHAR DEFAULT 'pending'")
+        _ensure_column(conn, "reports", "status_updated_at", "TIMESTAMP")
+    logger.info("Successfully checked/added missing status columns to reports.")
+except Exception as e:
+    logger.warning(f"reports.status column fix skipped or already applied: {e}")
 # -----------------------------------------------
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -127,7 +137,7 @@ for path in STORAGE_PATHS:
 
 app.mount("/static", StaticFiles(directory="app/storage/uploads/original"), name="static")
 
-# --- IMPROVEMENT: Production Health Check Endpoint ---
+# --- Production Health Check Endpoint ---
 @app.get("/health", tags=["Monitoring"])
 def health_check():
     """System health check endpoint for cloud/deployment monitoring."""
