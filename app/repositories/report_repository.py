@@ -1,29 +1,12 @@
 # app/repositories/report_repository.py
+import sys
+import os
 from sqlalchemy.orm import Session
 from app.models.report import Report
 
 class ReportRepository:
     def __init__(self):
         self.model = Report
-
-    def get_by_id(self, db: Session, report_id: int) -> Report | None:
-        return db.query(self.model).filter(self.model.id == report_id).first()
-
-    def create_report(
-        self, db: Session, *, image_path: str, damage_category: str,
-        latitude: float | None, longitude: float | None, reported_by_id: int | None = None
-    ) -> Report:
-        db_obj = Report(
-            image_path=image_path,
-            damage_category=damage_category,
-            latitude=latitude,
-            longitude=longitude,
-            reported_by_id=reported_by_id
-        )
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
 
     def get_filtered(
         self, 
@@ -57,7 +40,6 @@ class ReportRepository:
         """
         from datetime import datetime, timezone
         
-        # Make sure get_by_id exists in this class or base class
         report = db.query(self.model).filter(self.model.id == report_id).first()
         if report is None:
             return None
@@ -68,3 +50,6 @@ class ReportRepository:
         db.commit()
         db.refresh(report)
         return report
+
+# Instantiate the repository object cleanly at the end of the file block
+report_repository = ReportRepository()

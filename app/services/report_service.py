@@ -4,20 +4,6 @@ from app.utils.report_serializer import serialize_report
 
 class ReportService:
     @staticmethod
-    async def process_and_save_report(db, image, latitude, longitude, current_user):
-        # ... your existing image file processing/saving logic ...
-
-        db_report = report_repository.create_report(
-            db=db,
-            image_path=file_location,
-            damage_category=summary_category,
-            latitude=latitude,
-            longitude=longitude,
-            reported_by_id=current_user.id,
-        )
-        return db_report
-
-    @staticmethod
     def get_reports(db, current_user, damage_type=None, severity=None, status=None):
         owner_id = None if current_user.is_admin else current_user.id
         reports = report_repository.get_filtered(
@@ -27,7 +13,7 @@ class ReportService:
 
     @staticmethod
     def get_report_by_id(db, report_id, current_user):
-        report = report_repository.get_by_id(db, report_id)
+        report = db.query(report_repository.model).filter(report_repository.model.id == report_id).first()
         if report is None:
             return None
         if not current_user.is_admin and report.reported_by_id != current_user.id:
@@ -41,4 +27,5 @@ class ReportService:
             return None
         return serialize_report(report)
 
+# Instantiate the service object cleanly at the base tail scope
 report_service = ReportService()
