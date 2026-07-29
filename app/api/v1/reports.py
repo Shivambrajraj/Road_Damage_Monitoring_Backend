@@ -27,6 +27,8 @@ def list_reports(
 @router.post("/", response_model=ReportCreateResponse, status_code=http_status.HTTP_201_CREATED)
 async def create_report(
     file: UploadFile = File(...),
+    type: str = Form(...),
+    severity: str = Form(...),
     latitude: float = Form(None),
     longitude: float = Form(None),
     db: Session = Depends(get_db),
@@ -41,6 +43,8 @@ async def create_report(
             db=db,
             file=file,
             user=current_user,
+            damage_type=type,
+            severity=severity,
             latitude=latitude,
             longitude=longitude
         )

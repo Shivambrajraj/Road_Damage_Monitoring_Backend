@@ -20,8 +20,12 @@ def serialize_report(report: Report) -> dict:
 
     # Build an absolute URL so the image renders correctly from the
     # frontend (which runs on a different origin/port than the API).
+    # NOTE: main.py mounts StaticFiles at "/static/original" and
+    # "/static/processed" (not a bare "/static"), so the subfolder the
+    # file was actually saved into must be included here too.
     filename = os.path.basename(report.image_path)
-    image_url = f"{settings.BACKEND_BASE_URL}/static/{filename}"
+    subfolder = os.path.basename(os.path.dirname(report.image_path)) or "original"
+    image_url = f"{settings.BACKEND_BASE_URL}/static/{subfolder}/{filename}"
 
     return {
         "id": str(report.id),

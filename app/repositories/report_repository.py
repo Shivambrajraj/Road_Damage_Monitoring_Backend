@@ -3,10 +3,49 @@ import sys
 import os
 from sqlalchemy.orm import Session
 from app.models.report import Report
+from app.models.damage import Damage
 
 class ReportRepository:
     def __init__(self):
         self.model = Report
+
+    def create(
+        self,
+        db: Session,
+        *,
+        image_path: str,
+        damage_category: str,
+        severity_level: str,
+        latitude: float | None,
+        longitude: float | None,
+        reported_by_id: int | None,
+        detections: list[dict] | None = None,
+    ) -> Report:
+        """
+        Persists a new Report row, along with one Damage row per ML
+        detection (if the model found anything), in a single transaction.
+        """
+        report = Report(
+            image_path=image_path,
+            damage_category=damage_category,
+            severity_level=severity_level,
+            latitude=latitude,
+            longitude=longitude,
+            reported_by_id=reported_by_id,
+        )
+        db.add(report)
+        db.flush()  # assigns report.id without committing yet
+
+        for detection in (detections or []):
+            db.add(Damage(
+                report_id=report.id,
+                category=detection["label"],
+                confidence=detection["confidence"],
+            ))
+
+        db.commit()
+        db.refresh(report)
+        return report
 
     def get_filtered(
         self, 
