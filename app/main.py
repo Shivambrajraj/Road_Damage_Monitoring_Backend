@@ -1,4 +1,3 @@
-# app/main.py
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,7 +14,6 @@ from app.middleware.logging import RequestLoggingMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.authentication import GlobalAuthMiddleware
 from app.middleware.authorization import MaintenanceLockMiddleware
-# Updated Import Path to reflect consolidated exception domain:
 from app.exceptions.custom import AppException, database_integrity_exception_handler
 
 import subprocess
@@ -34,7 +32,7 @@ logger.info("Initializing Road Damage Monitoring platform services...")
 
 # --- TEMPORARY RENDER FREE TIER DATABASE FIX ---
 try:
-    with engine.begin() as conn:  # engine.begin() automatically handles the transaction commit
+    with engine.begin() as conn:  # engine.begin() automatically handles transaction commit
         conn.execute(text("ALTER TABLE reports ADD COLUMN IF NOT EXISTS reported_by_id INTEGER REFERENCES users(id);"))
     logger.info("Successfully checked/added missing reported_by_id column to database.")
 except Exception as e:
@@ -99,22 +97,10 @@ async def app_exception_handler(request: Request, exc: AppException):
         }
     )
 
-# Updated target registration reference
 app.add_exception_handler(IntegrityError, database_integrity_exception_handler)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    """
-    Safety net for any exception that isn't an AppException/HTTPException
-    (e.g. a bug, a third-party library error, an SMTP timeout, etc.).
-
-    Without this, Starlette's default error handling happens OUTSIDE the
-    CORS middleware layer, so the response is sent back with no CORS
-    headers at all. The browser then blocks the response entirely and
-    the frontend sees what looks like a network/CORS failure instead of
-    the real 500 error. Registering a handler here keeps every response
-    inside the CORS-wrapped part of the middleware stack.
-    """
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
@@ -125,6 +111,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         },
     )
 
+# Ensure required upload directories exist on startup
 STORAGE_PATHS = [
     "app/storage/uploads/original",
     "app/storage/uploads/processed",
@@ -135,7 +122,9 @@ STORAGE_PATHS = [
 for path in STORAGE_PATHS:
     os.makedirs(path, exist_ok=True)
 
-app.mount("/static", StaticFiles(directory="app/storage/uploads/original"), name="static")
+# Static file mounts to serve both uploaded raw photos and YOLO output images
+app.mount("/static/original", StaticFiles(directory="app/storage/uploads/original"), name="static_original")
+app.mount("/static/processed", StaticFiles(directory="app/storage/uploads/processed"), name="static_processed")
 
 # --- Production Health Check Endpoint ---
 @app.get("/health", tags=["Monitoring"])
@@ -150,10 +139,7 @@ def health_check():
             "database": "connected"
         }
     except Exception as e:
-        # Crucial Security Patch: Log the raw diagnostic trace internally
         logger.error(f"Health Check Failure: {str(e)}")
-        
-        # Return a generic, safe payload to the public network
         return {
             "status": "unhealthy",
             "database": "disconnected"

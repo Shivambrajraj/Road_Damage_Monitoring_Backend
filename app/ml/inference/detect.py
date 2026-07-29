@@ -1,57 +1,57 @@
-# app/ml/inference/detect.py
 """
-PLACEHOLDER DETECTION MODULE — Phase 1 (website-first build)
-==============================================================
-This intentionally does NOT load a real YOLO model yet. The real
-`road_damage.pt` weights aren't trained/exported yet, so this module
-generates a plausible, structured detection result instead, in the
-exact shape the real model will eventually return:
+REAL DETECTION MODULE — Phase 2 (YOLO Integration)
+==================================================
+This module loads the trained YOLO model (`best.pt` or `road_damage.pt`)
+and runs actual object detection on incoming image paths.
 
+It maintains the existing return signature:
     [{"label": "Pothole", "confidence": 0.87}, ...]
-
-This lets the rest of the system (DB storage, severity classification,
-dashboard, map, analytics) be built and tested end-to-end right now.
-
-PHASE 2 TODO (swap this out once you have a trained model):
-  1. `pip install ultralytics` and add it back to requirements.txt
-  2. Replace the body of `run_damage_detection` below with:
-
-        from ultralytics import YOLO
-        MODEL_PATH = "app/ml/models/road_damage.pt"
-        model = YOLO(MODEL_PATH)
-        results = model(image_path)
-        detected_damages = []
-        for result in results:
-            for box in result.boxes:
-                class_id = int(box.cls[0])
-                label = model.names[class_id]
-                confidence = float(box.conf[0])
-                detected_damages.append({"label": label, "confidence": round(confidence, 2)})
-        return detected_damages
-
-  3. Delete the `random`-based logic below.
+so all downstream services (DB storage, severity scoring, maps)
+continue working seamlessly.
 """
-import random
 
-# Keep these labels in sync with ANOMALY_TYPES in the frontend's constants.js
-DAMAGE_LABELS = ["Pothole", "Longitudinal Crack", "Rutting"]
+import os
+from typing import List, Dict, Any
+from ultralytics import YOLO
+
+# Resolve path to weights file inside app/ml/models/
+# Rename your best.pt to road_damage.pt or change the filename below
+MODEL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../models/road_damage.pt")
+)
+
+# Load the model once when the application starts
+model = YOLO(MODEL_PATH)
 
 
-def run_damage_detection(image_path: str):
+def run_damage_detection(image_path: str) -> List[Dict[str, Any]]:
     """
-    MOCK implementation. Returns a small random set of plausible
-    detections so the rest of the pipeline (severity scoring, DB
-    storage, dashboard/analytics) has realistic data to work with.
+    Runs YOLO object detection on the provided image path.
 
-    Real signature/behavior to preserve when swapping in YOLOv8:
-    takes an image path, returns List[{"label": str, "confidence": float}]
+    Parameters:
+        image_path (str): Full filesystem path to the input image.
+
+    Returns:
+        List[Dict[str, Any]]: List of detected objects with 'label' and 'confidence'.
+                              Example: [{"label": "Pothole", "confidence": 0.87}]
     """
-    num_detections = random.choices([0, 1, 2, 3], weights=[15, 35, 35, 15])[0]
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"Image not found at path: {image_path}")
 
-    detections = []
-    for _ in range(num_detections):
-        label = random.choice(DAMAGE_LABELS)
-        confidence = round(random.uniform(0.55, 0.97), 2)
-        detections.append({"label": label, "confidence": confidence})
+    # Run YOLO inference
+    results = model(image_path)
 
-    return detections
+    detected_damages = []
+
+    for result in results:
+        for box in result.boxes:
+            class_id = int(box.cls[0])
+            label = model.names[class_id]
+            confidence = float(box.conf[0])
+
+            detected_damages.append({
+                "label": label,
+                "confidence": round(confidence, 2)
+            })
+
+    return detected_damages
