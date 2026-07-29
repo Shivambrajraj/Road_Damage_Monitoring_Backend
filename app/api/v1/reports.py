@@ -24,20 +24,17 @@ def list_reports(
 # =====================================================================
 # ADDED POST ENDPOINT FOR CREATING REPORTS / UPLOADING IMAGES
 # =====================================================================
+# app/api/v1/reports.py
 @router.post("/", response_model=ReportCreateResponse, status_code=http_status.HTTP_201_CREATED)
 async def create_report(
     file: UploadFile = File(...),
-    type: str = Form(...),
-    severity: str = Form(...),
+    type: str = Form("Unclassified"),
+    severity: str = Form("LOW"),
     latitude: float = Form(None),
     longitude: float = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Receives image upload, executes ML detection (YOLO),
-    saves original/processed images, and stores entry in PostgreSQL.
-    """
     try:
         report = await report_service.create_report(
             db=db,
