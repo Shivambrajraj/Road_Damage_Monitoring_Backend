@@ -21,6 +21,36 @@ def list_reports(
     """Regular users see only their own reports. Admins see all of them."""
     return report_service.get_reports(db, current_user, damage_type=type, severity=severity, status=status)
 
+# =====================================================================
+# ADDED POST ENDPOINT FOR CREATING REPORTS / UPLOADING IMAGES
+# =====================================================================
+@router.post("/", response_model=ReportCreateResponse, status_code=http_status.HTTP_201_CREATED)
+async def create_report(
+    file: UploadFile = File(...),
+    latitude: float = Form(None),
+    longitude: float = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Receives image upload, executes ML detection (YOLO),
+    saves original/processed images, and stores entry in PostgreSQL.
+    """
+    try:
+        report = await report_service.create_report(
+            db=db,
+            file=file,
+            user=current_user,
+            latitude=latitude,
+            longitude=longitude
+        )
+        return report
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process report: {str(e)}"
+        )
+
 @router.get("/details/{report_id}", response_model=ReportResponse)
 def get_report_details(
     report_id: int,
