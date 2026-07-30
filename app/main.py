@@ -1,11 +1,17 @@
 import os
+import sys
+import subprocess
+from pathlib import Path
+from typing import Dict, Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from app.core.database import engine, Base, SessionLocal
+import uvicorn
 
+from app.core.database import engine, Base, SessionLocal
 from app.core.config import settings
 from app.core.logging import configure_logging, logger
 from app.api.router import api_router
@@ -15,11 +21,6 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.authentication import GlobalAuthMiddleware
 from app.middleware.authorization import MaintenanceLockMiddleware
 from app.exceptions.custom import AppException, database_integrity_exception_handler
-
-import subprocess
-import sys
-from pathlib import Path
-import uvicorn
 
 import app.models.report 
 import app.models.damage 
@@ -70,13 +71,6 @@ try:
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables verified/created successfully.")
 except Exception as e:
-    # A bad or unreachable DATABASE_URL (e.g. an expired/deleted Render
-    # free Postgres instance, or a region mismatch between the web
-    # service and the database) used to crash the entire app here with
-    # no chance to even respond to a health check. Log it loudly instead
-    # so the server still boots and every request gets an actual error
-    # response — not a dropped connection the browser reports as a
-    # generic network failure.
     logger.error(f"CRITICAL: Could not connect to the database at startup: {e}")
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -125,6 +119,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # Ensure required upload directories exist on startup
 STORAGE_PATHS = [
+    "app/storage/uploads",
     "app/storage/uploads/original",
     "app/storage/uploads/processed",
     "app/storage/uploads/thumbnails",
@@ -134,9 +129,10 @@ STORAGE_PATHS = [
 for path in STORAGE_PATHS:
     os.makedirs(path, exist_ok=True)
 
-# Static file mounts to serve both uploaded raw photos and YOLO output images
+# Static file mounts to serve both uploaded raw photos and YOLO segmentation output images
 app.mount("/static/original", StaticFiles(directory="app/storage/uploads/original"), name="static_original")
 app.mount("/static/processed", StaticFiles(directory="app/storage/uploads/processed"), name="static_processed")
+app.mount("/static", StaticFiles(directory="app/storage/uploads"), name="static_uploads")
 
 # --- Production Health Check Endpoint ---
 @app.get("/health", tags=["Monitoring"])

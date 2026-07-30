@@ -9,19 +9,23 @@ class MLService:
     @staticmethod
     def analyze_road_image(image_path: str) -> Dict[str, Any]:
         """
-        Processes an image through the YOLO detection pipeline and produces
+        Processes an image through the YOLO segmentation pipeline and produces
         structured results suitable for DB persistence and API responses.
         """
         try:
-            # Execute YOLO model inference
-            detections: List[Dict[str, Any]] = run_damage_detection(image_path)
+            # Execute YOLO model inference (returns a dict with detections & processed_image_path)
+            result: Dict[str, Any] = run_damage_detection(image_path)
+
+            detections: List[Dict[str, Any]] = result.get("detections", [])
+            processed_image_path: str | None = result.get("processed_image_path")
 
             if not detections:
                 return {
                     "summary": "Normal",
                     "damage_count": 0,
                     "categories": [],
-                    "detections": []
+                    "detections": [],
+                    "processed_image_path": processed_image_path
                 }
 
             # Extract unique damage categories
@@ -32,7 +36,8 @@ class MLService:
                 "summary": summary_str,
                 "damage_count": len(detections),
                 "categories": categories,
-                "detections": detections  # List of {"label": str, "confidence": float}
+                "detections": detections,  # List of {"label": str, "confidence": float, "bounding_box": [...]}
+                "processed_image_path": processed_image_path
             }
 
         except Exception as e:
@@ -42,5 +47,6 @@ class MLService:
                 "damage_count": 0,
                 "categories": [],
                 "detections": [],
+                "processed_image_path": None,
                 "error": str(e)
             }

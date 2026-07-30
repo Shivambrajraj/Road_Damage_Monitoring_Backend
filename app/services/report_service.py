@@ -13,7 +13,7 @@ class ReportService:
         Full upload pipeline:
           1. Persist the uploaded image to disk.
           2. Validate it's a real, decodable image.
-          3. Run it through the YOLO detection model.
+          3. Run it through the YOLO segmentation model.
           4. Store the Report (+ any detected Damage rows) in the DB.
           5. Return the serialized report plus the top detection for the UI.
         """
@@ -23,14 +23,18 @@ class ReportService:
         # 2. Make sure it's actually a valid image (raises InvalidImageException if not)
         ImageProcessor.validate_and_read_image(image_path)
 
-        # 3. Run ML inference (never throws — returns an "error" key on failure instead)
+        # 3. Run ML inference (returns dict with detections and processed_image_path)
         ml_result = MLService.analyze_road_image(image_path)
         detections = ml_result.get("detections", [])
+        processed_image_path = ml_result.get("processed_image_path")
+
+        # Use the annotated/segmented image path if available; fallback to original image_path
+        final_image_path = processed_image_path or image_path
 
         # 4. Persist the report row, plus one Damage row per detected object
         report = report_repository.create(
             db,
-            image_path=image_path,
+            image_path=final_image_path,
             damage_category=damage_type,
             severity_level=severity,
             latitude=latitude,
