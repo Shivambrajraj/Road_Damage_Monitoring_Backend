@@ -1,26 +1,41 @@
 """
-REAL DETECTION & SEGMENTATION MODULE — Phase 2 (YOLO Integration)
-==================================================================
-This module loads the trained YOLO segmentation model (`road_damage.pt`),
-runs inference on incoming image paths, renders bounding boxes and masks,
-saves the annotated output image, and returns the detection details.
+REAL DETECTION MODULE — Phase 2 (YOLO Integration)
+==================================================
+This module loads the trained YOLO model (`best.pt` or `road_damage.pt`)
+and runs actual object detection on incoming image paths.
+
+It maintains the existing return signature:
+    [{"label": "Pothole", "confidence": 0.87}, ...]
+so all downstream services (DB storage, severity scoring, maps)
+continue working seamlessly.
 """
 
 import os
 import base64
-import cv2
 from typing import List, Dict, Any
 from ultralytics import YOLO
 
-# Resolve path to weights file inside app/models/
+# Resolve path to weights file inside app/models/ (a sibling of app/ml/,
+# NOT app/ml/models/ — that folder only ever held an empty 0-byte
+# placeholder file, which is what was actually being loaded and crashing).
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../models/road_damage.pt")
 )
+# Git-safe plain-text copy of the same weights (base64). Binary .pt files
+# can get silently corrupted by git's CRLF/LF line-ending conversion on
+# push/clone; a base64 text file is immune to that, so we always rebuild
+# the real .pt from it here rather than trusting whatever binary made it
+# through git.
 MODEL_PATH_B64 = MODEL_PATH + ".b64"
 
 
 def _ensure_model_file():
-    """Always rebuild road_damage.pt from its base64 text copy if present."""
+    """Always rebuild road_damage.pt from its base64 text copy, if that
+    copy is present. We don't try to guess whether the committed binary
+    is "corrupted enough" (e.g. by size) — corruption can leave the file
+    at a normal size but with scrambled bytes, which a size check would
+    miss entirely. The .b64 file is plain text and survives git/GitHub
+    untouched, so it's always the trustworthy source when present."""
     if os.path.exists(MODEL_PATH_B64):
         with open(MODEL_PATH_B64, "r") as f:
             encoded = f.read()
@@ -42,59 +57,34 @@ _ensure_model_file()
 model = YOLO(MODEL_PATH)
 
 
-def run_damage_detection(image_path: str) -> Dict[str, Any]:
+def run_damage_detection(image_path: str) -> List[Dict[str, Any]]:
     """
-    Runs YOLO segmentation inference on an input image, renders bounding boxes and 
-    masks onto the image, saves the annotated result, and returns detection details.
+    Runs YOLO object detection on the provided image path.
 
     Parameters:
         image_path (str): Full filesystem path to the input image.
 
     Returns:
-        Dict[str, Any]: Dictionary containing 'detections' list and 'processed_image_path'.
+        List[Dict[str, Any]]: List of detected objects with 'label' and 'confidence'.
+                              Example: [{"label": "Pothole", "confidence": 0.87}]
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found at path: {image_path}")
 
-    # 1. Run YOLO Segmentation Inference
+    # Run YOLO inference
     results = model(image_path)
 
     detected_damages = []
-    annotated_image_path = None
 
     for result in results:
-        # 2. Extract bounding boxes, class labels, and confidence
-        if result.boxes is not None:
-            for box in result.boxes:
-                class_id = int(box.cls[0])
-                label = model.names[class_id]
-                confidence = float(box.conf[0])
-                
-                # Get bounding box coordinates [x1, y1, x2, y2]
-                xyxy = box.xyxy[0].tolist()
+        for box in result.boxes:
+            class_id = int(box.cls[0])
+            label = model.names[class_id]
+            confidence = float(box.conf[0])
 
-                detected_damages.append({
-                    "label": label,
-                    "confidence": round(confidence, 2),
-                    "bounding_box": [round(coord, 2) for c in xyxy for coord in [c]]
-                })
+            detected_damages.append({
+                "label": label,
+                "confidence": round(confidence, 2)
+            })
 
-        # 3. Render bounding boxes, labels, and masks onto the image
-        # result.plot() returns an OpenCV BGR numpy array
-        annotated_array = result.plot()
-
-        # 4. Save the annotated image into the 'processed' directory
-        directory, filename = os.path.split(image_path)
-        processed_dir = os.path.join(directory, "..", "processed")
-        os.makedirs(processed_dir, exist_ok=True)
-
-        annotated_filename = f"annotated_{filename}"
-        annotated_image_path = os.path.abspath(os.path.join(processed_dir, annotated_filename))
-
-        # Write image array to disk
-        cv2.imwrite(annotated_image_path, annotated_array)
-
-    return {
-        "detections": detected_damages,
-        "processed_image_path": annotated_image_path
-    }
+    return detected_damages
