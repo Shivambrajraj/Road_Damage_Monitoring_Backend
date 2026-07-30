@@ -15,10 +15,11 @@ import base64
 from typing import List, Dict, Any
 from ultralytics import YOLO
 
-# Resolve path to weights file inside app/ml/models/
-# Rename your best.pt to road_damage.pt or change the filename below
+# Resolve path to weights file inside app/models/ (a sibling of app/ml/,
+# NOT app/ml/models/ — that folder only ever held an empty 0-byte
+# placeholder file, which is what was actually being loaded and crashing).
 MODEL_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../models/road_damage.pt")
+    os.path.join(os.path.dirname(__file__), "../../models/road_damage.pt")
 )
 # Git-safe plain-text copy of the same weights (base64). Binary .pt files
 # can get silently corrupted by git's CRLF/LF line-ending conversion on
