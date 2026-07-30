@@ -1,0 +1,21 @@
+# Force git to treat these as pure binary — never touch their bytes.
+# Without this, Windows git (core.autocrlf=true, which is the default on
+# Windows) silently rewrites LF <-> CRLF inside every tracked file it
+# thinks is text. A PyTorch .pt checkpoint is a zip archive full of raw
+# bytes, so that "conversion" mangles it — which is exactly what produces
+# "file is empty, truncated or corrupted (EOFError: Ran out of input)"
+# the moment Render's clone tries to torch.load() it, even though the
+# file looks fine on your own machine.
+*.pt binary
+*.pth binary
+*.onnx binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
