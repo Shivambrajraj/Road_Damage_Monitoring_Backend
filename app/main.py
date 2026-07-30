@@ -19,6 +19,7 @@ from app.exceptions.custom import AppException, database_integrity_exception_han
 import subprocess
 import sys
 from pathlib import Path
+import uvicorn
 
 import app.models.report 
 import app.models.damage 

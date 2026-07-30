@@ -10,6 +10,14 @@ python-multipart>=0.0.9
 psycopg2-binary>=2.9.9
 PyJWT>=2.8.0
 requests>=2.31.0
+
+# CPU-only torch wheels (Render has no GPU, and the default PyPI build of
+# torch pulls ~2GB of CUDA libraries that blow past Render's free-tier
+# build disk quota and cause the deploy to fail). This index is checked
+# first, so pip grabs the small CPU build instead.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
 ultralytics>=8.2.0
 opencv-python-headless>=4.9.0
 numpy>=1.26.0

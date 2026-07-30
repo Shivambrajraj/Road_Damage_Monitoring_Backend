@@ -4,10 +4,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Road Damage API"
     API_V1_STR: str = "/api/v1"
-    DATABASE_URL: str
+    # Fallback keeps the app booting on Render even if DATABASE_URL hasn't
+    # been added yet under Render's dashboard -> Environment tab (the local
+    # .env file is git-ignored, so it never reaches the deployed server).
+    DATABASE_URL: str = "sqlite:///./road_damage.db"
 
     # New Security Settings
-    JWT_SECRET_KEY: str
+    # Fallback prevents a hard crash on boot if JWT_SECRET_KEY isn't set as
+    # a Render environment variable yet. Replace it with a real secret
+    # (e.g. `openssl rand -hex 32`) under Render -> Environment for production.
+    JWT_SECRET_KEY: str = "insecure-default-change-me-in-render-env-vars"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
