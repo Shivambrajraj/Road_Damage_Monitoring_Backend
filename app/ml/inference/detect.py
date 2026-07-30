@@ -29,20 +29,25 @@ MODEL_PATH_B64 = MODEL_PATH + ".b64"
 
 
 def _ensure_model_file():
-    """Rebuild road_damage.pt from its base64 text copy if the binary is
-    missing, empty, or too small to be a real checkpoint (i.e. corrupted
-    in transit through git)."""
-    needs_rebuild = (
-        not os.path.exists(MODEL_PATH)
-        or os.path.getsize(MODEL_PATH) < 1_000_000  # real weights are MBs
-    )
-    if needs_rebuild and os.path.exists(MODEL_PATH_B64):
+    """Always rebuild road_damage.pt from its base64 text copy, if that
+    copy is present. We don't try to guess whether the committed binary
+    is "corrupted enough" (e.g. by size) — corruption can leave the file
+    at a normal size but with scrambled bytes, which a size check would
+    miss entirely. The .b64 file is plain text and survives git/GitHub
+    untouched, so it's always the trustworthy source when present."""
+    if os.path.exists(MODEL_PATH_B64):
         with open(MODEL_PATH_B64, "r") as f:
             encoded = f.read()
         decoded = base64.b64decode(encoded.encode())
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
         with open(MODEL_PATH, "wb") as f:
             f.write(decoded)
+        print(f"[detect.py] Rebuilt {MODEL_PATH} from base64 copy ({len(decoded)} bytes).")
+    elif not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(
+            f"Neither {MODEL_PATH} nor {MODEL_PATH_B64} was found — "
+            "the model weights are missing from this deployment."
+        )
 
 
 _ensure_model_file()
