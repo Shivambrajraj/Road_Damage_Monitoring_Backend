@@ -66,7 +66,18 @@ except Exception as e:
     logger.warning(f"reports.status column fix skipped or already applied: {e}")
 # -----------------------------------------------
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created successfully.")
+except Exception as e:
+    # A bad or unreachable DATABASE_URL (e.g. an expired/deleted Render
+    # free Postgres instance, or a region mismatch between the web
+    # service and the database) used to crash the entire app here with
+    # no chance to even respond to a health check. Log it loudly instead
+    # so the server still boots and every request gets an actual error
+    # response — not a dropped connection the browser reports as a
+    # generic network failure.
+    logger.error(f"CRITICAL: Could not connect to the database at startup: {e}")
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
