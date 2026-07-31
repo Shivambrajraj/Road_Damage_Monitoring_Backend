@@ -1,7 +1,7 @@
 # app/repositories/report_repository.py
 import sys
 import os
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.models.report import Report
 from app.models.damage import Damage
 
@@ -60,7 +60,10 @@ class ReportRepository:
         Dynamically filters road damage reports based on provided search vectors.
         Returns results sorted by newest records first.
         """
-        query = db.query(self.model)
+        # selectinload eagerly fetches all `damages` rows in one extra query
+        # instead of one query per report (N+1) when serialize_report reads
+        # report.damages for each row.
+        query = db.query(self.model).options(selectinload(self.model.damages))
         
         if damage_type:
             query = query.filter(self.model.damage_category.ilike(f"%{damage_type}%"))

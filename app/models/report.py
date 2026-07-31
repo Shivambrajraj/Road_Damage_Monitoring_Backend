@@ -8,14 +8,14 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     image_path = Column(String, nullable=False)
-    damage_category = Column(String, nullable=False)
+    damage_category = Column(String, nullable=False, index=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    severity_level = Column(String, default="Low", nullable=False)
+    severity_level = Column(String, default="Low", nullable=False, index=True)
 
     # NEW: lifecycle status
-    status = Column(String, default="pending", nullable=False)
+    status = Column(String, default="pending", nullable=False, index=True)
     status_updated_at = Column(DateTime, nullable=True)
 
     reported_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)

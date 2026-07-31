@@ -1,4 +1,5 @@
 # app/services/report_service.py
+from fastapi.concurrency import run_in_threadpool
 from app.core.constants import DEFAULT_STORAGE_PATH
 from app.repositories.report_repository import report_repository
 from app.services.ml_service import MLService
@@ -24,7 +25,11 @@ class ReportService:
         ImageProcessor.validate_and_read_image(image_path)
 
         # 3. Run ML inference (returns dict with detections and processed_image_path)
-        ml_result = MLService.analyze_road_image(image_path)
+        # IMPORTANT: this is a synchronous, CPU-bound YOLO call. Running it directly
+        # inside this async function would block the entire event loop — freezing
+        # every other request (logins, dashboard, map, etc.) until inference finishes.
+        # run_in_threadpool offloads it to a worker thread so the server stays responsive.
+        ml_result = await run_in_threadpool(MLService.analyze_road_image, image_path)
         detections = ml_result.get("detections", [])
         processed_image_path = ml_result.get("processed_image_path")
 
