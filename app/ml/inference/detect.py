@@ -2,8 +2,9 @@
 REAL DETECTION & SEGMENTATION MODULE — Phase 2 (YOLO Integration)
 ==================================================================
 This module loads the trained YOLO segmentation model (`road_damage.pt`),
-runs inference on incoming image paths with custom confidence/IoU thresholds,
-renders complete bounding boxes and filled masks, and saves the annotated image.
+runs inference on incoming image paths, renders bounding boxes and masks,
+saves the annotated output image, and returns detection details alongside 
+itemized category counts.
 """
 
 import os
@@ -16,6 +17,7 @@ from ultralytics import YOLO
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../models/road_damage.pt")
 )
+# Git-safe plain-text copy of the same weights (base64).
 MODEL_PATH_B64 = MODEL_PATH + ".b64"
 
 
@@ -43,40 +45,30 @@ model = YOLO(MODEL_PATH)
 
 
 def run_damage_detection(image_path: str) -> Dict[str, Any]:
-    """
-    Runs YOLO segmentation inference on an input image, renders full bounding boxes and 
-    segmentation masks onto the image, saves the result, and returns detection details.
-
-    Parameters:
-        image_path (str): Full filesystem path to the input image.
-
-    Returns:
-        Dict[str, Any]: Dictionary containing 'detections' list, 'counts_by_type' map,
-                        and 'processed_image_path'.
-    """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found at path: {image_path}")
 
-    # 1. Run YOLO Segmentation Inference with optimized confidence & IoU thresholds
-    # conf=0.25 captures faint cracks/holes; iou=0.45 prevents overlapping box suppression
-    results = model(image_path, conf=0.25, iou=0.45)
+    # 1. Run YOLO Segmentation Inference
+    # conf=0.15 ensures lower-confidence predictions (like large/faint potholes) are captured
+    # imgsz=640 matches the standard YOLO training canvas size
+    results = model(image_path, conf=0.15, iou=0.45, imgsz=640)
 
     detected_damages = []
     counts_by_type = {}
     annotated_image_path = None
 
     for result in results:
-        # 2. Extract bounding boxes, class labels, confidence scores, and aggregate counts
+        # 2. Extract bounding boxes, class labels, and confidence
         if result.boxes is not None:
             for box in result.boxes:
                 class_id = int(box.cls[0])
-                label = model.names[class_id]  # e.g., "Pothole", "Crack", "Alligator Crack"
+                label = model.names[class_id]  # e.g., "Pothole", "Crack"
                 confidence = float(box.conf[0])
                 
                 # Get bounding box coordinates [x1, y1, x2, y2]
                 xyxy = box.xyxy[0].tolist()
 
-                # Increment category breakdown count
+                # Increment count per damage category
                 counts_by_type[label] = counts_by_type.get(label, 0) + 1
 
                 detected_damages.append({
@@ -85,9 +77,7 @@ def run_damage_detection(image_path: str) -> Dict[str, Any]:
                     "bounding_box": [round(coord, 2) for coord in xyxy]
                 })
 
-        # 3. Render bounding boxes, labels, AND complete segmentation masks
-        # line_width=3 makes boxes thick; masks=True fills the entire polygon mask;
-        # conf=True & labels=True displays label names and confidence ratings.
+        # 3. Render bounding boxes, labels, and segmentation masks
         annotated_array = result.plot(
             line_width=3,
             masks=True,
