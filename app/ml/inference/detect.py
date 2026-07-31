@@ -2,9 +2,8 @@
 REAL DETECTION & SEGMENTATION MODULE — Phase 2 (YOLO Integration)
 ==================================================================
 This module loads the trained YOLO segmentation model (`road_damage.pt`),
-runs inference on incoming image paths, renders bounding boxes and masks,
-saves the annotated output image, and returns detection details alongside 
-itemized category counts.
+runs inference on incoming image paths with custom confidence/IoU thresholds,
+renders complete bounding boxes and filled masks, and saves the annotated image.
 """
 
 import os
@@ -17,7 +16,6 @@ from ultralytics import YOLO
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../models/road_damage.pt")
 )
-# Git-safe plain-text copy of the same weights (base64).
 MODEL_PATH_B64 = MODEL_PATH + ".b64"
 
 
@@ -46,9 +44,8 @@ model = YOLO(MODEL_PATH)
 
 def run_damage_detection(image_path: str) -> Dict[str, Any]:
     """
-    Runs YOLO segmentation inference on an input image, renders bounding boxes and 
-    masks onto the image, saves the annotated result, and returns detection details
-    along with breakdown counts by damage category.
+    Runs YOLO segmentation inference on an input image, renders full bounding boxes and 
+    segmentation masks onto the image, saves the result, and returns detection details.
 
     Parameters:
         image_path (str): Full filesystem path to the input image.
@@ -60,8 +57,9 @@ def run_damage_detection(image_path: str) -> Dict[str, Any]:
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found at path: {image_path}")
 
-    # 1. Run YOLO Segmentation Inference
-    results = model(image_path)
+    # 1. Run YOLO Segmentation Inference with optimized confidence & IoU thresholds
+    # conf=0.25 captures faint cracks/holes; iou=0.45 prevents overlapping box suppression
+    results = model(image_path, conf=0.25, iou=0.45)
 
     detected_damages = []
     counts_by_type = {}
@@ -87,8 +85,16 @@ def run_damage_detection(image_path: str) -> Dict[str, Any]:
                     "bounding_box": [round(coord, 2) for coord in xyxy]
                 })
 
-        # 3. Render bounding boxes, labels, and segmentation masks onto the image array
-        annotated_array = result.plot()
+        # 3. Render bounding boxes, labels, AND complete segmentation masks
+        # line_width=3 makes boxes thick; masks=True fills the entire polygon mask;
+        # conf=True & labels=True displays label names and confidence ratings.
+        annotated_array = result.plot(
+            line_width=3,
+            masks=True,
+            boxes=True,
+            labels=True,
+            conf=True
+        )
 
         # 4. Save the annotated image into the 'processed' directory
         directory, filename = os.path.split(image_path)
