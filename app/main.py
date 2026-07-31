@@ -3,6 +3,7 @@ import sys
 import subprocess
 from pathlib import Path
 from typing import Dict, Any
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -73,10 +74,10 @@ try:
 except Exception as e:
     logger.error(f"CRITICAL: Could not connect to the database at startup: {e}")
 
-app = FastAPI(title=settings.PROJECT_NAME)
 
-@app.on_event("startup")
-async def trigger_admin_creation():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Modern lifespan handler replacing deprecated on_event("startup")
     try:
         print("Executing Admin Promotion Script...")
         script_path = Path(__file__).resolve().parent.parent / "scripts" / "create_admin.py"
@@ -84,7 +85,11 @@ async def trigger_admin_creation():
         print("Admin Promotion Completed Successfully!")
     except Exception as e:
         print(f"Admin Promotion script failed on startup: {str(e)}")
-        
+    yield
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+
 app.add_middleware(RateLimitMiddleware, requests_per_minute=30)
 app.add_middleware(RequestLoggingMiddleware)
 setup_cors(app)
@@ -155,7 +160,7 @@ def health_check():
     finally:
         if db:
             db.close()
-            
+
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")

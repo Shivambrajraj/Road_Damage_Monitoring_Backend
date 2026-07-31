@@ -14,9 +14,9 @@ class ReportService:
         Full upload pipeline:
           1. Persist the uploaded image to disk.
           2. Validate it's a real, decodable image.
-          3. Run it through the YOLO segmentation model.
+          3. Run it through the YOLO segmentation model in a worker thread.
           4. Store the Report (+ any detected Damage rows) in the DB.
-          5. Return the serialized report plus the top detection for the UI.
+          5. Return the serialized report plus the summary and top detection for the UI.
         """
         # 1. Save the raw upload to app/storage/uploads/original
         image_path = await FileManager.save_uploaded_file(file, DEFAULT_STORAGE_PATH)
@@ -24,13 +24,11 @@ class ReportService:
         # 2. Make sure it's actually a valid image (raises InvalidImageException if not)
         ImageProcessor.validate_and_read_image(image_path)
 
-        # 3. Run ML inference (returns dict with detections and processed_image_path)
-        # IMPORTANT: this is a synchronous, CPU-bound YOLO call. Running it directly
-        # inside this async function would block the entire event loop — freezing
-        # every other request (logins, dashboard, map, etc.) until inference finishes.
-        # run_in_threadpool offloads it to a worker thread so the server stays responsive.
+        # 3. Run ML inference in threadpool so it doesn't block FastAPI's event loop
         ml_result = await run_in_threadpool(MLService.analyze_road_image, image_path)
         detections = ml_result.get("detections", [])
+        counts_by_type = ml_result.get("counts_by_type", {})
+        summary = ml_result.get("summary", "Normal")
         processed_image_path = ml_result.get("processed_image_path")
 
         # Use the annotated/segmented image path if available; fallback to original image_path
@@ -48,8 +46,11 @@ class ReportService:
             detections=detections,
         )
 
-        # 5. Shape the response: base report fields + the single strongest detection
+        # 5. Shape the response: base report fields + counts breakdown & top detection
         response = serialize_report(report)
+        response["summary"] = summary
+        response["counts_by_type"] = counts_by_type
+
         if detections:
             top = max(detections, key=lambda d: d["confidence"])
             response["detection"] = {
